@@ -1,0 +1,177 @@
+id           = "oldirtty/workspaces-reworked"
+name         = "Workspaces Reworked"
+version      = "0.1.8"
+plugin_api   = 28
+author       = "oldirtty"
+license      = "MIT"
+icon         = "layout-grid"
+description  = "Workspaces widget reworked for ricers, with custom labels per position."
+tags         = ["workspaces", "umbriel", "i3", "bar"]
+# dependencies = ["umbriel"]
+
+[[widget]]
+id    = "workspaces"
+entry = "widget.luau"
+hover_highlight = false
+
+[widget.actions]
+scroll_up = "workspace-switch prev"
+scroll_down = "workspace-switch next"
+
+  [[widget.setting]]
+  key             = "custom_labels"
+  type            = "string_list"
+  label_key       = "settings.custom_labels.label"
+  description_key = "settings.custom_labels.description"
+  default         = []
+
+  [[widget.setting]]
+  key       = "hide_first"
+  type      = "bool"
+  label_key = "settings.hide_first.label"
+  default   = false
+
+  [[widget.setting]]
+  key       = "hide_last"
+  type      = "bool"
+  label_key = "settings.hide_last.label"
+  default   = false
+
+  [[widget.setting]]
+  key       = "active_size"
+  type      = "int"
+  label_key = "settings.active_size.label"
+  default   = 12
+  min       = 0
+  max       = 48
+
+  [[widget.setting]]
+  key       = "inactive_size"
+  type      = "int"
+  label_key = "settings.inactive_size.label"
+  default   = 8
+  min       = 0
+  max       = 48
+
+  [[widget.setting]]
+  key       = "show_underline"
+  type      = "bool"
+  label_key = "settings.show_underline.label"
+  default   = false
+
+  [[widget.setting]]
+  key       = "underline_width"
+  type      = "int"
+  label_key = "settings.underline_width.label"
+  default   = 2
+  min       = 1
+  max       = 12
+  visible_when = { key = "show_underline", values = true }
+
+  [[widget.setting]]
+  key       = "underline_position"
+  type      = "select"
+  label_key = "settings.underline_position.label"
+  default   = "Bottom"
+  options = [
+    { value = "Bottom", label_key = "settings.underline_position.bottom" },
+    { value = "Top", label_key = "settings.underline_position.top" },
+  ]
+  visible_when = { key = "show_underline", values = true }
+
+  [[widget.setting]]
+  key       = "background_opacity"
+  type      = "int"
+  label_key = "settings.background_opacity.label"
+  default   = 100
+  min       = 1
+  max       = 100
+  visible_when = { key = "show_underline", values = true }
+
+  [[widget.setting]]
+  key       = "radius"
+  type      = "int"
+  label_key = "settings.radius.label"
+  default   = 0
+  min       = 0
+  max       = 48
+
+  [[widget.setting]]
+  key       = "height_percent"
+  type      = "int"
+  label_key = "settings.height_percent.label"
+  description_key = "settings.height_percent.description"
+  default   = 100
+  min       = 30
+  max       = 100
+
+  [[widget.setting]]
+  key       = "gap"
+  type      = "int"
+  label_key = "settings.gap.label"
+  default   = 2
+  min       = 0
+  max       = 24
+
+  [[widget.setting]]
+  key       = "focused_foreground"
+  type      = "color"
+  label_key = "settings.focused_foreground.label"
+  default   = "on_primary"
+
+  [[widget.setting]]
+  key       = "focused_background"
+  type      = "color"
+  label_key = "settings.focused_background.label"
+  default   = "primary"
+
+  [[widget.setting]]
+  key       = "focused_underline"
+  type      = "color"
+  label_key = "settings.focused_underline.label"
+  default   = "primary"
+  visible_when = { key = "show_underline", values = true }
+
+  [[widget.setting]]
+  key       = "occupied_foreground"
+  type      = "color"
+  label_key = "settings.occupied_foreground.label"
+  description_key = "settings.state_color.description"
+  default   = "on_surface"
+
+  [[widget.setting]]
+  key       = "occupied_background"
+  type      = "color"
+  label_key = "settings.occupied_background.label"
+  description_key = "settings.state_color.description"
+  default   = "#00000000"
+
+  [[widget.setting]]
+  key       = "occupied_underline"
+  type      = "color"
+  label_key = "settings.occupied_underline.label"
+  description_key = "settings.state_color.description"
+  default   = "on_surface"
+  visible_when = { key = "show_underline", values = true }
+
+  [[widget.setting]]
+  key       = "empty_foreground"
+  type      = "color"
+  label_key = "settings.empty_foreground.label"
+  description_key = "settings.state_color.description"
+  default   = "outline"
+
+  [[widget.setting]]
+  key       = "empty_background"
+  type      = "color"
+  label_key = "settings.empty_foreground.label"
+  description_key = "settings.state_color.description"
+  default   = "#00000000"
+
+  [[widget.setting]]
+  key       = "empty_underline"
+  type      = "color"
+  label_key = "settings.empty_underline.label"
+  description_key = "settings.state_color.description"
+  default   = "outline"
+  visible_when = { key = "show_underline", values = true }
