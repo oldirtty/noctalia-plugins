@@ -1,7 +1,7 @@
 id           = "oldirtty/workspaces-reworked"
 name         = "Workspaces Reworked"
 version      = "0.1.8"
-plugin_api   = 28
+plugin_api   = 34
 author       = "oldirtty"
 license      = "MIT"
 icon         = "layout-grid"
