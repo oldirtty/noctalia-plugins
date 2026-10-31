@@ -1,0 +1,150 @@
+id          = "oldirtty/minimal"
+name        = "Minimal"
+version     = "1.0.0"
+plugin_api  = 43
+author      = "oldirtty"
+license     = "MIT"
+description = "Minimal text widgets: vol, mic, bat, wifi, bt."
+tags        = ["minimal", "audio", "battery", "wifi", "bluetooth"]
+dependencies = ["wireplumber", "networkmanager", "bluez"]
+
+# Plugin-level setting: default label color for every widget (Settings -> Plugins)
+[[setting]]
+key       = "label_color"
+type      = "color"
+label_key = "settings.label_color.label"
+default   = "on_surface_variant"
+
+[[widget]]
+id    = "volume"
+entry = "volume.luau"
+
+  [widget.actions]
+  left = "panel-toggle control-center audio"
+  scroll_up = "volume-up 5%"
+  scroll_down = "volume-down 5%"
+
+  [[widget.setting]]
+  key       = "label"
+  type      = "string"
+  label_key = "settings.label.label"
+  default   = "vol"
+
+  [[widget.setting]]
+  key       = "use_custom_color"
+  type      = "bool"
+  label_key = "settings.use_custom_color.label"
+  default   = false
+
+  [[widget.setting]]
+  key       = "custom_color"
+  type      = "color"
+  label_key = "settings.custom_color.label"
+  default   = "primary"
+  visible_when = { key = "use_custom_color", values = ["true"] }
+
+[[widget]]
+id    = "mic"
+entry = "mic.luau"
+
+  [widget.actions]
+  left = "panel-toggle control-center audio"
+  scroll_up = "mic-volume-up 5%"
+  scroll_down = "mic-volume-down 5%"
+
+  [[widget.setting]]
+  key       = "label"
+  type      = "string"
+  label_key = "settings.label.label"
+  default   = "mic"
+
+  [[widget.setting]]
+  key       = "use_custom_color"
+  type      = "bool"
+  label_key = "settings.use_custom_color.label"
+  default   = false
+
+  [[widget.setting]]
+  key       = "custom_color"
+  type      = "color"
+  label_key = "settings.custom_color.label"
+  default   = "primary"
+  visible_when = { key = "use_custom_color", values = ["true"] }
+
+[[widget]]
+id    = "battery"
+entry = "battery.luau"
+
+  [widget.actions]
+  left = "panel-toggle control-center power"
+
+  [[widget.setting]]
+  key       = "label"
+  type      = "string"
+  label_key = "settings.label.label"
+  default   = "bat"
+
+  [[widget.setting]]
+  key       = "use_custom_color"
+  type      = "bool"
+  label_key = "settings.use_custom_color.label"
+  default   = false
+
+  [[widget.setting]]
+  key       = "custom_color"
+  type      = "color"
+  label_key = "settings.custom_color.label"
+  default   = "primary"
+  visible_when = { key = "use_custom_color", values = ["true"] }
+
+[[widget]]
+id    = "wifi"
+entry = "wifi.luau"
+
+  [widget.actions]
+  left = "panel-toggle control-center network"
+
+  [[widget.setting]]
+  key       = "label"
+  type      = "string"
+  label_key = "settings.label.label"
+  default   = "wifi"
+
+  [[widget.setting]]
+  key       = "use_custom_color"
+  type      = "bool"
+  label_key = "settings.use_custom_color.label"
+  default   = false
+
+  [[widget.setting]]
+  key       = "custom_color"
+  type      = "color"
+  label_key = "settings.custom_color.label"
+  default   = "primary"
+  visible_when = { key = "use_custom_color", values = ["true"] }
+
+[[widget]]
+id    = "bluetooth"
+entry = "bluetooth.luau"
+
+  [widget.actions]
+  left = "panel-toggle control-center bluetooth"
+
+  [[widget.setting]]
+  key       = "label"
+  type      = "string"
+  label_key = "settings.label.label"
+  default   = "bt"
+
+  [[widget.setting]]
+  key       = "use_custom_color"
+  type      = "bool"
+  label_key = "settings.use_custom_color.label"
+  default   = false
+
+  [[widget.setting]]
+  key       = "custom_color"
+  type      = "color"
+  label_key = "settings.custom_color.label"
+  default   = "primary"
+  visible_when = { key = "use_custom_color", values = ["true"] }

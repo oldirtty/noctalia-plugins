@@ -1,13 +1,13 @@
 id           = "oldirtty/workspaces-reworked"
 name         = "Workspaces Reworked"
-version      = "0.1.8"
-plugin_api   = 34
+version      = "0.1.9"
+plugin_api   = 43
 author       = "oldirtty"
 license      = "MIT"
 icon         = "layout-grid"
 description  = "Workspaces widget reworked for ricers, with custom labels per position."
 tags         = ["workspaces", "umbriel", "i3", "bar"]
-# dependencies = ["umbriel"]
+dependencies = ["umbriel"]
 
 [[widget]]
 id    = "workspaces"
@@ -86,7 +86,6 @@ scroll_down = "workspace-switch next"
   default   = 100
   min       = 1
   max       = 100
-  visible_when = { key = "show_underline", values = ["true"] }
 
   [[widget.setting]]
   key       = "radius"
@@ -151,7 +150,7 @@ scroll_down = "workspace-switch next"
   type      = "color"
   label_key = "settings.occupied_underline.label"
   description_key = "settings.state_color.description"
-  default   = "on_surface"
+  default   = "#00000000"
   visible_when = { key = "show_underline", values = ["true"] }
 
   [[widget.setting]]
@@ -159,7 +158,7 @@ scroll_down = "workspace-switch next"
   type      = "color"
   label_key = "settings.empty_foreground.label"
   description_key = "settings.state_color.description"
-  default   = "outline"
+  default   = "outline_variant"
 
   [[widget.setting]]
   key       = "empty_background"
@@ -173,5 +172,5 @@ scroll_down = "workspace-switch next"
   type      = "color"
   label_key = "settings.empty_underline.label"
   description_key = "settings.state_color.description"
-  default   = "outline"
+  default   = "#00000000"
   visible_when = { key = "show_underline", values = ["true"] }
