@@ -5,8 +5,24 @@ local label = noctalia.getConfig("label")
 local color = common.labelColor()
 local value = "..."
 
+-- before "---": `bluetoothctl show`; after: Name/Battery of each connected device
 local function parse(out)
-  return out:match("Powered:%s*yes") and "on" or "off"
+  local rows = {}
+  local devices = false
+  for line in out:gmatch("[^\n]+") do
+    if line == "---" then
+      devices = true
+    elseif devices then
+      local name = line:match("Name:%s*(.+)$")
+      local pct = line:match("Battery Percentage:%s*%S+%s*%((%d+)%)")
+      if name then
+        rows[#rows + 1] = { name, "connected" }
+      elseif pct and #rows > 0 then
+        rows[#rows][2] = pct .. "%"
+      end
+    end
+  end
+  return out:match("Powered:%s*yes") and "on" or "off", rows
 end
 
 local function draw()
@@ -14,9 +30,15 @@ local function draw()
 end
 
 function update()
-  common.poll("bluetoothctl show", parse, function(v)
+  local cmd = "bluetoothctl show; echo ---; for m in $(bluetoothctl devices Connected | cut -d' ' -f2); do bluetoothctl info $m | grep -E 'Name:|Battery Percentage:'; done"
+  common.poll(cmd, parse, function(v, rows)
     value = v
     draw()
+    if #rows > 0 then
+      barWidget.setTooltip(rows)
+    else
+      barWidget.clearTooltip()
+    end
   end)
 end
 

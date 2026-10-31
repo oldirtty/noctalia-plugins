@@ -99,7 +99,7 @@ entry = "battery.luau"
 
 [[widget]]
 id    = "wifi"
-entry = "wifi.luau"
+entry = "network.luau"
 
   [widget.actions]
   left = "panel-toggle control-center network"
@@ -109,6 +109,12 @@ entry = "wifi.luau"
   type      = "string"
   label_key = "settings.label.label"
   default   = "wifi"
+
+  [[widget.setting]]
+  key       = "wired_label"
+  type      = "string"
+  label_key = "settings.wired_label.label"
+  default   = "net"
 
   [[widget.setting]]
   key       = "use_custom_color"
@@ -148,3 +154,65 @@ entry = "bluetooth.luau"
   label_key = "settings.custom_color.label"
   default   = "primary"
   visible_when = { key = "use_custom_color", values = ["true"] }
+
+[[widget]]
+id    = "layout"
+entry = "layout.luau"
+
+  [[widget.setting]]
+  key       = "label"
+  type      = "string"
+  label_key = "settings.label.label"
+  default   = "L"
+
+  [[widget.setting]]
+  key       = "use_custom_color"
+  type      = "bool"
+  label_key = "settings.use_custom_color.label"
+  default   = false
+
+  [[widget.setting]]
+  key       = "custom_color"
+  type      = "color"
+  label_key = "settings.custom_color.label"
+  default   = "primary"
+  visible_when = { key = "use_custom_color", values = ["true"] }
+
+[[widget]]
+  id = "focused-app"
+  entry = "focused-app.luau"
+
+    [[widget.setting]]
+    key       = "label"
+    type      = "string"
+    label_key = "settings.label.label"
+    default   = "app"
+
+    [[widget.setting]]
+    key       = "use_custom_color"
+    type      = "bool"
+    label_key = "settings.use_custom_color.label"
+    default   = false
+
+    [[widget.setting]]
+    key       = "custom_color"
+    type      = "color"
+    label_key = "settings.custom_color.label"
+    default   = "primary"
+    visible_when = { key = "use_custom_color", values = ["true"] }
+
+    [[widget.setting]]
+    key       = "min_width"
+    type      = "int"
+    label_key = "settings.min_width.label"
+    default   = 80
+    min = 0
+    max = 800
+
+    [[widget.setting]]
+    key       = "max_width"
+    type      = "int"
+    label_key = "settings.max_width.label"
+    default   = 220
+    min = 40
+    max = 800

@@ -1,6 +1,9 @@
 {
   "settings.label.label": "Label",
+  "settings.wired_label.label": "Wired label",
   "settings.label_color.label": "Default label color",
   "settings.use_custom_color.label": "Override label color",
-  "settings.custom_color.label": "Label color"
+  "settings.custom_color.label": "Label color",
+  "settings.min_width.label": "Minimum width (px)",
+  "settings.max_width.label": "Maximum width (px)"
 }
