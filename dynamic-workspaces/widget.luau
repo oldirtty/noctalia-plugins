@@ -15,18 +15,20 @@ local function resolveOutput()
 end
 
 local WIDGET_TYPE = "oldirtty/workspaces-reworked:workspaces"
-local FALLBACK_THICKNESS = 26
-local cachedThickness = nil
+local FALLBACK_HEIGHT = 34
+local cachedHeight = nil
+local cachedContentScale = nil
 
+-- name of this plugin's widget instance listed in one of the bar's lanes, if any
 local function laneHas(bar, names)
   for _, lane in ipairs({ "start", "center", "end" }) do
     for _, name in ipairs(bar[lane] or {}) do
       if names[name] then
-        return true
+        return name
       end
     end
   end
-  return false
+  return nil
 end
 
 local function monitorOverride(bar, current)
@@ -45,8 +47,19 @@ local function monitorOverride(bar, current)
   return nil
 end
 
--- the bar that holds this widget, its thickness and capsule size, read from the shell config
-local function findBarThickness()
+local function outputScale()
+  local current = resolveOutput()
+  for _, o in ipairs(noctalia.outputs()) do
+    if o.name == current then
+      return o.scale or 1
+    end
+  end
+  return 1
+end
+
+-- height this widget can use on its bar, in logical px: the bar thickness (per-monitor override
+-- included), cut to the capsule size only when this widget actually has a capsule
+local function findBarHeight()
   local current = resolveOutput()
   local bars = noctalia.getSetting("bar")
   local widgets = noctalia.getSetting("widget")
@@ -64,19 +77,44 @@ local function findBarThickness()
   for name, bar in pairs(bars) do
     if name ~= "order" and type(bar) == "table" then
       local override = monitorOverride(bar, current) or {}
-      if laneHas(override, mine) or laneHas(bar, mine) then
-        local thickness = override.thickness or bar.thickness or 34
-        local capsule = override.capsule_thickness or bar.capsule_thickness or 0.76
-        return math.floor(thickness * capsule + 0.5)
+      local instance = laneHas(override, mine) or laneHas(bar, mine)
+      if instance then
+        local function pick(key, default)
+          if override[key] ~= nil then
+            return override[key]
+          end
+          if bar[key] ~= nil then
+            return bar[key]
+          end
+          return default
+        end
+
+        local capsule = widgets[instance].capsule
+        if capsule == nil then
+          capsule = pick("capsule", false)
+        end
+        -- ui.* sizes are multiplied by the bar and widget content scale, the bar thickness is not
+        local contentScale = pick("scale", 1) * (widgets[instance].scale or 1)
+        local thickness = pick("thickness", 34)
+        local fraction = capsule and pick("capsule_thickness", 0.76) or 1
+        noctalia.log(string.format(
+          "bar=%s widget=%s thickness=%s capsule=%s fraction=%s contentScale=%s",
+          name, instance, tostring(thickness), tostring(capsule), tostring(fraction), tostring(contentScale)
+        ))
+        return thickness * fraction, contentScale
       end
     end
   end
   return nil
 end
 
-local function barThickness()
-  local bar = noctalia.getSetting("bar.order[0]") or "default"
-  return noctalia.getSetting("bar." .. bar .. ".thickness") or 32
+-- returns the height in bar pixels and the content scale that multiplies every ui.* size
+local function barHeight()
+  if cachedHeight == nil then
+    cachedHeight, cachedContentScale = findBarHeight()
+    noctalia.log("bar height: " .. tostring(cachedHeight) .. ", output scale: " .. tostring(outputScale()))
+  end
+  return cachedHeight or FALLBACK_HEIGHT, cachedContentScale or 1
 end
 
 -- hex gets an aa suffix, theme tokens get "/alpha" (resolved live against the palette)
@@ -123,7 +161,11 @@ function render()
   local items = visibleWorkspaces()
   barWidget.setVisible(#items > 0)
 
-  local thickness = 2+ math.max(1, math.floor(barThickness() * noctalia.getConfig("height_percent") / 100 + 0.5))
+  -- floor to whole device pixels (rounding up spills a pixel past the bar), then convert to ui units
+  local height, contentScale = barHeight()
+  local scale = outputScale()
+  local pixels = math.max(1, math.floor(height * noctalia.getConfig("height_percent") / 100 * scale + 0.0001) / scale)
+  local thickness = pixels / contentScale
   local sizeProp = barWidget.isVertical() and "width" or "height"
 
   local chips = {}
@@ -140,7 +182,7 @@ function render()
     local lineW = 0
     if noctalia.getConfig("show_underline") == true then
       lineColor = noctalia.getConfig(state .. "_underline")
-      lineW = noctalia.getConfig("underline_width")
+      lineW = noctalia.getConfig("underline_width") / 2 -- setting is in half pixels
     end
 
     local label = ui.label({

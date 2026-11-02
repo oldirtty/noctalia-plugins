@@ -1,6 +1,6 @@
-id           = "oldirtty/workspaces-reworked"
-name         = "Workspaces Reworked"
-version      = "0.1.9"
+id           = "oldirtty/dynamic-workspaces"
+name         = "Dynamic Workspaces"
+version      = "0.1.12"
 plugin_api   = 43
 author       = "oldirtty"
 license      = "MIT"
@@ -63,9 +63,10 @@ scroll_down = "workspace-switch next"
   key       = "underline_width"
   type      = "int"
   label_key = "settings.underline_width.label"
-  default   = 2
+  description_key = "settings.underline_width.description"
+  default   = 4
   min       = 1
-  max       = 12
+  max       = 24
   visible_when = { key = "show_underline", values = ["true"] }
 
   [[widget.setting]]
@@ -136,7 +137,7 @@ scroll_down = "workspace-switch next"
   type      = "color"
   label_key = "settings.occupied_foreground.label"
   description_key = "settings.state_color.description"
-  default   = "on_surface"
+  default   = "on_surface_variant"
 
   [[widget.setting]]
   key       = "occupied_background"
