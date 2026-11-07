@@ -1,16 +1,16 @@
-id           = "oldirtty/dynamic-workspaces"
-name         = "Dynamic Workspaces"
-version      = "0.1.12"
-plugin_api   = 43
-author       = "oldirtty"
-license      = "MIT"
-icon         = "layout-grid"
-description  = "Workspaces widget reworked for ricers, with custom labels per position."
-tags         = ["workspaces", "umbriel", "i3", "bar"]
+id = "oldirtty/dynamic-workspaces"
+name = "Dynamic Workspaces"
+version = "1.1.0"
+plugin_api = 55
+author = "oldirtty"
+license = "MIT"
+icon = "layout-grid"
+description = "Workspaces widget reworked for ricers, with custom labels per position."
+tags = ["workspaces", "umbriel", "i3", "bar"]
 dependencies = ["umbriel"]
 
 [[widget]]
-id    = "workspaces"
+id = "workspaces"
 entry = "widget.luau"
 hover_highlight = false
 
@@ -18,160 +18,248 @@ hover_highlight = false
 scroll_up = "workspace-switch prev"
 scroll_down = "workspace-switch next"
 
-  [[widget.setting]]
-  key             = "custom_labels"
-  type            = "string_list"
-  label_key       = "settings.custom_labels.label"
-  description_key = "settings.custom_labels.description"
-  default         = []
+[[widget.setting]]
+key = "custom_labels"
+type = "string_list"
+label_key = "settings.custom_labels.label"
+description_key = "settings.custom_labels.description"
+default = []
 
-  [[widget.setting]]
-  key       = "hide_first"
-  type      = "bool"
-  label_key = "settings.hide_first.label"
-  default   = false
+[[widget.setting]]
+key = "hide_first"
+type = "bool"
+label_key = "settings.hide_first.label"
+default = false
 
-  [[widget.setting]]
-  key       = "hide_last"
-  type      = "bool"
-  label_key = "settings.hide_last.label"
-  default   = false
+[[widget.setting]]
+key = "hide_last"
+type = "bool"
+label_key = "settings.hide_last.label"
+default = false
 
-  [[widget.setting]]
-  key       = "active_size"
-  type      = "int"
-  label_key = "settings.active_size.label"
-  default   = 12
-  min       = 0
-  max       = 48
+[[widget.setting]]
+key = "pill_size_mode"
+type = "select"
+label_key = "settings.pill_size_mode.label"
+default = "Fit_Content"
+options = [
+  { value = "Fit_Content", label_key = "settings.pill_size_mode.fit_content" },
+  { value = "Fixed_Length", label_key = "settings.pill_size_mode.fixed_length" },
+]
 
-  [[widget.setting]]
-  key       = "inactive_size"
-  type      = "int"
-  label_key = "settings.inactive_size.label"
-  default   = 8
-  min       = 0
-  max       = 48
+[[widget.setting]]
+key = "active_padding"
+type = "int"
+label_key = "settings.active_padding.label"
+default = 12
+min = 0
+max = 48
+visible_when = { key = "pill_size_mode", values = ["Fit_Content"] }
 
-  [[widget.setting]]
-  key       = "show_underline"
-  type      = "bool"
-  label_key = "settings.show_underline.label"
-  default   = false
+[[widget.setting]]
+key = "inactive_padding"
+type = "int"
+label_key = "settings.inactive_padding.label"
+default = 8
+min = 0
+max = 48
+visible_when = { key = "pill_size_mode", values = ["Fit_Content"] }
 
-  [[widget.setting]]
-  key       = "underline_width"
-  type      = "int"
-  label_key = "settings.underline_width.label"
-  description_key = "settings.underline_width.description"
-  default   = 4
-  min       = 1
-  max       = 24
-  visible_when = { key = "show_underline", values = ["true"] }
+[[widget.setting]]
+key = "active_length"
+type = "double"
+label_key = "settings.active_length.label"
+description_key = "settings.pill_length.description"
+default = 2.20
+min = 0.20
+max = 8.0
+step = 0.10
+visible_when = { key = "pill_size_mode", values = ["Fixed_Length"] }
 
-  [[widget.setting]]
-  key       = "underline_position"
-  type      = "select"
-  label_key = "settings.underline_position.label"
-  default   = "Bottom"
-  options = [
-    { value = "Bottom", label_key = "settings.underline_position.bottom" },
-    { value = "Top", label_key = "settings.underline_position.top" },
-  ]
-  visible_when = { key = "show_underline", values = ["true"] }
+[[widget.setting]]
+key = "inactive_length"
+type = "double"
+label_key = "settings.inactive_length.label"
+description_key = "settings.pill_length.description"
+default = 1.0
+min = 0.20
+max = 8.0
+step = 0.10
+visible_when = { key = "pill_size_mode", values = ["Fixed_Length"] }
 
-  [[widget.setting]]
-  key       = "background_opacity"
-  type      = "int"
-  label_key = "settings.background_opacity.label"
-  default   = 100
-  min       = 1
-  max       = 100
+[[widget.setting]]
+key = "font_mode"
+type = "select"
+label_key = "settings.font_mode.label"
+default = "Auto"
+options = [
+  { value = "Auto", label_key = "settings.font_mode.auto" },
+  { value = "Fixed", label_key = "settings.font_mode.fixed" },
+  { value = "Default", label_key = "settings.font_mode.default" },
+]
 
-  [[widget.setting]]
-  key       = "radius"
-  type      = "int"
-  label_key = "settings.radius.label"
-  default   = 0
-  min       = 0
-  max       = 48
+[[widget.setting]]
+key = "font_min"
+type = "int"
+label_key = "settings.font_min.label"
+default = 8
+min = 6
+max = 24
+visible_when = { key = "font_mode", values = ["Auto"] }
 
-  [[widget.setting]]
-  key       = "height_percent"
-  type      = "int"
-  label_key = "settings.height_percent.label"
-  description_key = "settings.height_percent.description"
-  default   = 100
-  min       = 30
-  max       = 100
+[[widget.setting]]
+key = "font_size"
+type = "int"
+label_key = "settings.font_size.label"
+default = 12
+min = 6
+max = 48
+visible_when = { key = "font_mode", values = ["Fixed"] }
 
-  [[widget.setting]]
-  key       = "gap"
-  type      = "int"
-  label_key = "settings.gap.label"
-  default   = 2
-  min       = 0
-  max       = 24
+[[widget.setting]]
+key = "block_height"
+type = "double"
+label_key = "settings.block_height.label"
+description_key = "settings.block_height.description"
+default = 1.0
+min = 0.3
+max = 1.0
+step = 0.01
 
-  [[widget.setting]]
-  key       = "focused_foreground"
-  type      = "color"
-  label_key = "settings.focused_foreground.label"
-  default   = "on_primary"
+[[widget.setting]]
+key       = "show_underline"
+type      = "bool"
+label_key = "settings.show_underline.label"
+default   = false
 
-  [[widget.setting]]
-  key       = "focused_background"
-  type      = "color"
-  label_key = "settings.focused_background.label"
-  default   = "primary"
+[[widget.setting]]
+key = "underline_width"
+type = "double"
+label_key = "settings.underline_width.label"
+description_key = "settings.underline_width.description"
+default = 1.0
+min = 0.0
+max = 12.0
+step = 0.5
+visible_when = { key = "show_underline", values = [true] }
 
-  [[widget.setting]]
-  key       = "focused_underline"
-  type      = "color"
-  label_key = "settings.focused_underline.label"
-  default   = "primary"
-  visible_when = { key = "show_underline", values = ["true"] }
+[[widget.setting]]
+key = "underline_position"
+type = "select"
+label_key = "settings.underline_position.label"
+default = "Bottom"
+options = [
+  { value = "Bottom", label_key = "settings.underline_position.bottom" },
+  { value = "Top", label_key = "settings.underline_position.top" },
+]
+visible_when = { key = "show_underline", values = [true] }
 
-  [[widget.setting]]
-  key       = "occupied_foreground"
-  type      = "color"
-  label_key = "settings.occupied_foreground.label"
-  description_key = "settings.state_color.description"
-  default   = "on_surface_variant"
+[[widget.setting]]
+key = "background_opacity"
+type = "double"
+label_key = "settings.background_opacity.label"
+default = 1.0
+min = 0.0
+max = 1.0
+step = 0.01
 
-  [[widget.setting]]
-  key       = "occupied_background"
-  type      = "color"
-  label_key = "settings.occupied_background.label"
-  description_key = "settings.state_color.description"
-  default   = "#00000000"
+[[widget.setting]]
+key = "radius"
+type = "int"
+label_key = "settings.radius.label"
+default = 0
+min = 0
+max = 48
 
-  [[widget.setting]]
-  key       = "occupied_underline"
-  type      = "color"
-  label_key = "settings.occupied_underline.label"
-  description_key = "settings.state_color.description"
-  default   = "#00000000"
-  visible_when = { key = "show_underline", values = ["true"] }
+[[widget.setting]]
+key = "gap"
+type = "int"
+label_key = "settings.gap.label"
+default = 2
+min = 0
+max = 24
 
-  [[widget.setting]]
-  key       = "empty_foreground"
-  type      = "color"
-  label_key = "settings.empty_foreground.label"
-  description_key = "settings.state_color.description"
-  default   = "outline_variant"
+[[widget.setting]]
+key = "animation_duration"
+type = "int"
+label_key = "settings.animation_duration.label"
+description_key = "settings.animation_duration.description"
+default = 200
+min = 0
+max = 600
+step = 10
 
-  [[widget.setting]]
-  key       = "empty_background"
-  type      = "color"
-  label_key = "settings.empty_foreground.label"
-  description_key = "settings.state_color.description"
-  default   = "#00000000"
+[[widget.setting]]
+key       = "show_label"
+type      = "bool"
+label_key = "settings.show_label.label"
+default   = true
 
-  [[widget.setting]]
-  key       = "empty_underline"
-  type      = "color"
-  label_key = "settings.empty_underline.label"
-  description_key = "settings.state_color.description"
-  default   = "#00000000"
-  visible_when = { key = "show_underline", values = ["true"] }
+[[widget.setting]]
+key = "focused_foreground"
+type = "color"
+label_key = "settings.focused_foreground.label"
+description_key = "settings.state_color.description"
+default = "on_primary"
+visible_when = { key = "show_label", values = [true] }
+
+[[widget.setting]]
+key = "focused_background"
+type = "color"
+label_key = "settings.focused_background.label"
+description_key = "settings.state_color.description"
+default = "primary"
+
+[[widget.setting]]
+key = "focused_underline"
+type = "color"
+label_key = "settings.focused_underline.label"
+description_key = "settings.state_color.description"
+default = "primary"
+visible_when = { key = "show_underline", values = [true] }
+
+[[widget.setting]]
+key = "occupied_foreground"
+type = "color"
+label_key = "settings.occupied_foreground.label"
+description_key = "settings.state_color.description"
+default = "on_surface_variant"
+visible_when = { key = "show_label", values = [true] }
+
+[[widget.setting]]
+key = "occupied_background"
+type = "color"
+label_key = "settings.occupied_background.label"
+description_key = "settings.state_color.description"
+default = "#00000000"
+
+[[widget.setting]]
+key = "occupied_underline"
+type = "color"
+label_key = "settings.occupied_underline.label"
+description_key = "settings.state_color.description"
+default = "#00000000"
+visible_when = { key = "show_underline", values = [true] }
+
+[[widget.setting]]
+key = "empty_foreground"
+type = "color"
+label_key = "settings.empty_foreground.label"
+description_key = "settings.state_color.description"
+default = "outline_variant"
+visible_when = { key = "show_label", values = [true] }
+
+[[widget.setting]]
+key = "empty_background"
+type = "color"
+label_key = "settings.empty_background.label"
+description_key = "settings.state_color.description"
+default = "#00000000"
+
+[[widget.setting]]
+key = "empty_underline"
+type = "color"
+label_key = "settings.empty_underline.label"
+description_key = "settings.state_color.description"
+default = "#00000000"
+visible_when = { key = "show_underline", values = [true] }
