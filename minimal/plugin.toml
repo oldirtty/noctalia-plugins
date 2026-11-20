@@ -1,0 +1,66 @@
+id          = "oldirtty/minimal"
+name        = "Minimal"
+version     = "1.1.0"
+plugin_api  = 43
+author      = "oldirtty"
+license     = "MIT"
+description = "Minimal text widgets: wifi, bt, layout."
+tags        = ["minimal", "wifi", "bluetooth", "layout"]
+dependencies = ["networkmanager", "bluez"]
+
+[[widget]]
+id    = "wifi"
+entry = "network.luau"
+
+  [widget.actions]
+  left = "panel-toggle control-center network"
+
+  [[widget.setting]]
+  key       = "use_custom_color"
+  type      = "bool"
+  label_key = "settings.use_custom_color.label"
+  default   = false
+
+  [[widget.setting]]
+  key       = "custom_color"
+  type      = "color"
+  label_key = "settings.custom_color.label"
+  default   = "primary"
+  visible_when = { key = "use_custom_color", values = ["true"] }
+
+[[widget]]
+id    = "bluetooth"
+entry = "bluetooth.luau"
+
+  [widget.actions]
+  left = "panel-toggle control-center bluetooth"
+
+  [[widget.setting]]
+  key       = "use_custom_color"
+  type      = "bool"
+  label_key = "settings.use_custom_color.label"
+  default   = false
+
+  [[widget.setting]]
+  key       = "custom_color"
+  type      = "color"
+  label_key = "settings.custom_color.label"
+  default   = "primary"
+  visible_when = { key = "use_custom_color", values = ["true"] }
+
+[[widget]]
+id    = "layout"
+entry = "layout.luau"
+
+  [[widget.setting]]
+  key       = "use_custom_color"
+  type      = "bool"
+  label_key = "settings.use_custom_color.label"
+  default   = false
+
+  [[widget.setting]]
+  key       = "custom_color"
+  type      = "color"
+  label_key = "settings.custom_color.label"
+  default   = "primary"
+  visible_when = { key = "use_custom_color", values = ["true"] }
