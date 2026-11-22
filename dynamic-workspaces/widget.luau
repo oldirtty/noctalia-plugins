@@ -82,15 +82,37 @@ local function outputScale()
   return (info and info.scale) or 1
 end
 
-local function laneHas(bar, widgetNames)
-  for _, lane in ipairs({ "start", "center", "end" }) do
-    for _, name in ipairs(bar[lane] or {}) do
-      if widgetNames[name] then
-        return name
+-- group id -> member widget names; a monitor override may restyle a group without repeating its members
+local function groupMembers(bar, override)
+  local byId = {}
+  for _, source in ipairs({ bar, override }) do
+    for _, group in ipairs(source.capsule_group or {}) do
+      if group.members then
+        byId[group.id] = group.members
       end
     end
   end
-  return nil
+  return byId
+end
+
+-- Finds this plugin's widget in the lanes, directly or inside a "group:<id>" capsule group.
+-- Returns its instance name and whether it sits in a group.
+local function laneHas(lanes, widgetNames, members)
+  for _, lane in ipairs({ "start", "center", "end" }) do
+    for _, token in ipairs(lanes[lane] or {}) do
+      if widgetNames[token] then
+        return token, false
+      end
+
+      local groupId = string.match(token, "^group:(.+)$")
+      for _, member in ipairs(groupId and members[groupId] or {}) do
+        if widgetNames[member] then
+          return member, true
+        end
+      end
+    end
+  end
+  return nil, false
 end
 
 local function monitorOverride(bar, currentOutput)
@@ -127,7 +149,11 @@ local function findBarGeometry()
   for name, bar in pairs(bars) do
     if name ~= "order" and type(bar) == "table" then
       local override = monitorOverride(bar, current) or {}
-      local instance = laneHas(override, ownedWidgets) or laneHas(bar, ownedWidgets)
+      local members = groupMembers(bar, override)
+      local instance, inGroup = laneHas(override, ownedWidgets, members)
+      if not instance then
+        instance, inGroup = laneHas(bar, ownedWidgets, members)
+      end
       if instance then
         local function pick(key, default)
           if override[key] ~= nil then
@@ -139,7 +165,7 @@ local function findBarGeometry()
           return default
         end
 
-        local capsule = widgets[instance].capsule
+        local capsule = inGroup or widgets[instance].capsule
         if capsule == nil then
           capsule = pick("capsule", false)
         end
@@ -167,8 +193,14 @@ local function computeLayout(blockHeight)
   local height, contentScale = barGeometry()
   local scale = outputScale()
 
-  -- Floor to whole device pixels so fractional scaling never overflows the bar
-  local pixels = math.max(1, math.floor(height * blockHeight * scale + 0.0001) / scale)
+  -- Whole device pixels, never more than the box. A block whose size has a different parity than the
+  -- box lands half a pixel off center and rounds to one side (more margin below), so match the parity.
+  local boxPixels = math.floor(height * scale + 0.5)
+  local blockPixels = math.max(1, math.floor(height * blockHeight * scale + 0.0001))
+  if blockPixels < boxPixels and (boxPixels - blockPixels) % 2 ~= 0 then
+    blockPixels = blockPixels + 1
+  end
+  local pixels = blockPixels / scale
   local vertical = barWidget.isVertical()
 
   -- At full height the block ends one pixel row short of the bar, so it gets one extra device pixel
@@ -294,7 +326,9 @@ local function buildChip(ws, layout, cfg)
   -- Underlines apply only at full block height
   local hasFullHeight = cfg.blockHeight >= FULL_HEIGHT_EPSILON
   local lineColor = hasFullHeight and palette.underline or TRANSPARENT
-  local lineWidth = hasFullHeight and cfg.underlineWidth or 0
+  local lineWidth = (hasFullHeight and cfg.showUnderline) and
+    cfg.underlineWidth + (cfg.underlinePosition == "Top" and 1 or 0)
+    or 0
 
   -- Boxes land on whole device pixels, so a fractional width would round away. Draw the next whole
   -- number of pixels and let the opacity carry the fraction (1.5 px -> 2 px at 75%).
