@@ -46,9 +46,10 @@ local S = {
   vol = 0, volApplied = 0, volMuted = false,
   mic = 0, micApplied = 0, micMuted = false,
   audioReady = false,
-  monitors = {}, -- { { id, bus, drm, name, value, targetPct, lastSentPct, noctaliaPct, max, ready }, ... }
+  monitors = {}, -- { { id, bus, drm, backlight, name, value, targetPct, lastSentPct, noctaliaPct, max, ready }, ... }
   monitorsScanned = false,
-  syncBrightness = false,
+  syncBrightness = true, -- always: one slider drives every monitor
+  noctaliaSync = false, -- Noctalia's own brightness.sync_all_monitors
   syncTargetPct = nil,
   syncLastSentPct = nil,
   syncNoctaliaPct = nil,
@@ -309,11 +310,41 @@ local function parseVcp10(s)
   if not cur then
     cur, max = string.match(s or "", "current value =%s*(%d+),%s*max value =%s*(%d+)")
   end
+  if not cur then
+    cur, max = string.match(s or "", "^%s*(%d+)%s+(%d+)%s*$")
+  end
   cur, max = tonumber(cur), tonumber(max)
   if cur and max and max > 0 then
     return math.floor((cur / max) * 100 + 0.5), max
   end
   return nil, nil
+end
+
+local function scanBacklights()
+  local found = {}
+  local entries = noctalia.listDir("/sys/class/backlight") or {}
+  for _, name in ipairs(entries) do
+    local base = "/sys/class/backlight/" .. name
+    local cur = tonumber(noctalia.string.trim(noctalia.readFile(base .. "/brightness") or ""))
+    local max = tonumber(noctalia.string.trim(noctalia.readFile(base .. "/max_brightness") or ""))
+    if cur and max and max > 0 then
+      local pct = math.floor((cur / max) * 100 + 0.5)
+      table.insert(found, {
+        id = "bl-" .. name,
+        bus = "bl-" .. name,
+        drm = nil,
+        backlight = name,
+        name = name,
+        value = pct,
+        targetPct = pct,
+        lastSentPct = pct,
+        noctaliaPct = pct,
+        max = max,
+        ready = true,
+      })
+    end
+  end
+  return found
 end
 
 local function parseMonitors(out)
@@ -358,6 +389,7 @@ local function parseMonitors(out)
         id = "bus-" .. m.bus,
         bus = m.bus,
         drm = m.drm or (prev and prev.drm),
+        backlight = nil,
         name = m.model or m.drm or ("Monitor " .. i),
         value = prev and prev.value or 50,
         targetPct = prev and prev.targetPct or nil,
@@ -468,7 +500,7 @@ end
 
 function M.readLocal()
   local docs = readJsonFiles()
-  S.syncBrightness = readSyncBrightnessSetting(docs)
+  S.noctaliaSync = readSyncBrightnessSetting(docs)
   readQuickStates(docs)
 
   local up = noctalia.readFile("/proc/uptime")
@@ -528,14 +560,21 @@ function M.refreshBrightness(readAll, done, ignoreBusy)
     targets = { S.monitors[1] }
   end
 
+  -- Run sequentially so ddcutil never contends for /dev/i2c-* locks.
   local lines = {}
   for _, m in ipairs(targets) do
-    table.insert(lines, string.format(
-      '(echo "bri_%s=$(ddcutil --bus=%s --sleep-multiplier=.1 getvcp 10 --brief 2>/dev/null)") &',
-      m.bus, m.bus
-    ))
+    if m.backlight then
+      table.insert(lines, string.format(
+        'echo "bri_%s=$(cat /sys/class/backlight/%s/brightness 2>/dev/null) $(cat /sys/class/backlight/%s/max_brightness 2>/dev/null)"',
+        m.bus, m.backlight, m.backlight
+      ))
+    else
+      table.insert(lines, string.format(
+        'echo "bri_%s=$(ddcutil --bus=%s getvcp 10 --brief 2>/dev/null)"',
+        m.bus, m.bus
+      ))
+    end
   end
-  table.insert(lines, "wait")
 
   noctalia.runAsync(table.concat(lines, "\n"), function(res)
     readingBrightness = false
@@ -546,7 +585,7 @@ function M.refreshBrightness(readAll, done, ignoreBusy)
 
     local kv = {}
     for line in string.gmatch((res and res.stdout) or "", "[^\n]+") do
-      local k, v = string.match(line, "^([%w_]+)=(.*)$")
+      local k, v = string.match(line, "^([%w_%-]+)=(.*)$")
       if k then kv[k] = v end
     end
 
@@ -589,6 +628,21 @@ function M.refreshBrightness(readAll, done, ignoreBusy)
         mon.max = syncedMax or mon.max or 100
         mon.ready = true
       end
+    elseif #S.monitors > 0 then
+      -- Fallback: if a detected monitor refuses VCP 10 reads, still allow slider writes.
+      for _, mon in ipairs(S.monitors) do
+        if not mon.ready then
+          mon.ready = true
+          mon.targetPct = mon.value
+          mon.noctaliaPct = mon.value
+          changed = true
+        end
+      end
+      if S.syncBrightness and S.syncTargetPct == nil then
+        local fallback = S.monitors[1].value
+        S.syncTargetPct = fallback
+        S.syncNoctaliaPct = fallback
+      end
     end
 
     if changed then
@@ -604,10 +658,29 @@ function M.detectMonitors(done)
     return
   end
   detectingMonitors = true
-  noctalia.runAsync({ "ddcutil", "detect", "--brief", "--sleep-multiplier=.1" }, function(res)
+  noctalia.runAsync({ "ddcutil", "detect", "--brief" }, function(res)
     detectingMonitors = false
-    S.monitors = parseMonitors(res and res.stdout or "")
-    S.monitorsScanned = true
+    local stdout = (res and res.stdout) or ""
+    local parsed = parseMonitors(stdout)
+
+    if #parsed > 0 then
+      S.monitors = parsed
+      S.monitorsScanned = true
+    else
+      local bl = scanBacklights()
+      if #bl > 0 then
+        S.monitors = bl
+        S.monitorsScanned = true
+        local pct = bl[1].value
+        S.syncTargetPct = pct
+        S.syncLastSentPct = pct
+        S.syncNoctaliaPct = pct
+      elseif res and res.exitCode == 0 then
+        S.monitors = {}
+        S.monitorsScanned = true
+      end
+    end
+
     M.onChange(false)
     if done then done() end
   end)
@@ -837,7 +910,16 @@ local function applyAudioDelta(what, onDone)
   end, onDone)
 end
 
--- Fast direct ddcutil write while dragging (keeps physical screen responsive)
+local function buildHardwareCmd(m, pct)
+  local max = m.max or 100
+  local raw = math.floor((pct / 100) * max + 0.5)
+  if m.backlight then
+    return string.format("echo %d > /sys/class/backlight/%s/brightness 2>/dev/null", raw, m.backlight)
+  end
+  return string.format("ddcutil --bus=%s --noverify setvcp 10 %d 2>/dev/null", m.bus, raw)
+end
+
+-- Direct hardware write while dragging (sequential to avoid /dev/i2c-* lock contention)
 local function applyBrightnessHardware(mon, onDone)
   if S.syncBrightness then
     runCoalesced("bri_all", function()
@@ -850,14 +932,8 @@ local function applyBrightnessHardware(mon, onDone)
       local cmds = {}
       for _, m in ipairs(S.monitors) do
         m.lastSentPct = pct
-        local max = m.max or 100
-        local raw = math.floor((pct / 100) * max + 0.5)
-        table.insert(cmds, string.format(
-          "ddcutil --bus=%s --noverify --sleep-multiplier=.1 setvcp 10 %d 2>/dev/null &",
-          m.bus, raw
-        ))
+        table.insert(cmds, buildHardwareCmd(m, pct))
       end
-      table.insert(cmds, "wait")
       return table.concat(cmds, "\n")
     end, onDone)
   else
@@ -867,13 +943,15 @@ local function applyBrightnessHardware(mon, onDone)
         return nil
       end
       mon.lastSentPct = pct
+      if mon.backlight then
+        return buildHardwareCmd(mon, pct)
+      end
       local max = mon.max or 100
       local raw = math.floor((pct / 100) * max + 0.5)
       return {
         "ddcutil",
         "--bus=" .. mon.bus,
         "--noverify",
-        "--sleep-multiplier=.1",
         "setvcp",
         "10",
         tostring(raw),
@@ -914,7 +992,7 @@ local function syncNoctaliaBrightness(mon)
     local targetArg = "all"
     if S.syncBrightness then
       local first = S.monitors[1]
-      if first and first.drm and first.drm ~= "" then
+      if S.noctaliaSync and first and first.drm and first.drm ~= "" then
         targetArg = first.drm
       end
     elseif mon.drm and mon.drm ~= "" then
@@ -922,28 +1000,6 @@ local function syncNoctaliaBrightness(mon)
     end
 
     return { "noctalia", "msg", subcmd, targetArg, step }
-  end, function()
-    M.refreshBrightness(false, function()
-      local desired = S.syncBrightness and S.syncTargetPct or mon.targetPct
-      local actual = S.syncBrightness and S.syncNoctaliaPct or mon.noctaliaPct
-      if desired and actual and math.abs(actual - desired) >= 2 then
-        local diff = desired - actual
-        local halfStep = math.floor(math.abs(diff) / 2)
-        if halfStep >= 1 then
-          local subcmd = diff > 0 and "brightness-up" or "brightness-down"
-          local targetArg = "all"
-          if S.syncBrightness then
-            local first = S.monitors[1]
-            if first and first.drm and first.drm ~= "" then targetArg = first.drm end
-          elseif mon.drm and mon.drm ~= "" then
-            targetArg = mon.drm
-          end
-          noctalia.runAsync({ "noctalia", "msg", subcmd, targetArg, tostring(halfStep) }, function()
-            M.refreshBrightness(false, nil, true)
-          end)
-        end
-      end
-    end, true)
   end)
 end
 
@@ -974,7 +1030,7 @@ function M.applyBrightnessPreset(mon)
   local key = S.syncBrightness and "bri_all" or ("bri_" .. mon.bus)
   briSyncGen[key] = (briSyncGen[key] or 0) + 1
   M.dragging[key] = false
-  M.cooldown[key] = noctalia.nowMs() + 1200
+  M.cooldown[key] = noctalia.nowMs() + 1500
 
   if S.syncBrightness then
     S.syncTargetPct = pct
@@ -1063,7 +1119,7 @@ function M.monitorSlider(mon)
     setTarget(v)
     M.dragging[key] = true
     M.dragSince[key] = noctalia.nowMs()
-    M.cooldown[key] = noctalia.nowMs() + 1200
+    M.cooldown[key] = noctalia.nowMs() + 1500
     M.onChange(true)
 
     throttled(key, 60, function()
@@ -1077,7 +1133,7 @@ function M.monitorSlider(mon)
     if not mon.ready then return end
     briSyncGen[key] = (briSyncGen[key] or 0) + 1
     M.dragging[key] = false
-    M.cooldown[key] = noctalia.nowMs() + 1200
+    M.cooldown[key] = noctalia.nowMs() + 1500
 
     throttled(key, 60, function()
       applyBrightnessHardware(mon)

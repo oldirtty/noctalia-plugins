@@ -8,14 +8,18 @@ local tr = i18n.tr
 local S = sys.state
 local isOpen = false
 
+-- Fallback helper for translation keys not yet added to translations/*.json
+local function trOr(key, fallback)
+  local v = tr(key)
+  return (v ~= nil and v ~= "" and v ~= key) and v or fallback
+end
+
 -- Tabler glyph names, in one place so a wrong name is a one-line fix.
 local G = {
   vol = "volume",
   volOff = "volume-off",
-  mic = "microphone",
-  micOff = "microphone-off",
-  bright = "sun",
-  monitor = "device-desktop",
+  bright = "brightness-high",
+  arrow = "chevron-right",
   wifi = "wifi",
   wifiOff = "wifi-off",
   ethernet = "ethernet",
@@ -24,27 +28,51 @@ local G = {
   powerSaver = "leaf",
   powerBalanced = "scale",
   powerPerformance = "bolt",
-  themeDark = "moon",
-  themeLight = "sun",
+  themeDark = "nightlight-forced",
+  themeLight = "brightness-2",
   themeAuto = "contrast",
   dnd = "bell-off",
   dndOff = "bell",
   caffeine = "mug",
-  nightLight = "moon-stars",
+  nightLight = "moon-filled",
   nightLightOff = "moon-off",
-  lock = "lock",
-  suspend = "zzz",
-  logout = "logout",
-  reboot = "refresh",
-  shutdown = "power",
+  wallpaper = "photo",
+  clipboard = "clipboard",
 }
+
+-- ---------- Shell & Control Center shortcuts ----------
+
+C.onHover = function()
+  if isOpen then render() end
+end
+
+-- tab: Noctalia Control Center context (audio, monitor, network, bluetooth)
+local function openControlCenter(tab)
+  panel.close()
+  noctalia.runAsync({ "noctalia", "msg", "panel-open", "control-center", tab })
+end
+
+-- name: Noctalia shell panel id (session, wallpaper, clipboard)
+local function openPanel(name)
+  panel.close()
+  noctalia.runAsync({ "noctalia", "msg", "panel-toggle", name })
+end
+
+local function openButton(key, tab)
+  return {
+    key = key .. "-open",
+    glyph = G.arrow,
+    full = true,
+    tooltip = tr("core.tip.open_panel"),
+    onClick = function() openControlCenter(tab) end,
+  }
+end
 
 -- ---------- sliders: audio & brightness ----------
 
--- kind: "vol" (output) or "mic" (input)
-local function volumeTile(kind, title, glyphOn, glyphOff)
-  local muted = S[kind .. "Muted"]
-  local onChange, onEnd = sys.slider(kind)
+local function audioTile()
+  local muted = S.volMuted
+  local onChange, onEnd = sys.slider("vol")
 
   local visualState = "disabled"
   if S.audioReady then
@@ -52,51 +80,47 @@ local function volumeTile(kind, title, glyphOn, glyphOff)
   end
 
   return C.sliderTile({
-    key = "t-" .. kind,
-    glyph = muted and glyphOff or glyphOn,
-    title = title,
+    key = "t-vol",
+    glyph = muted and G.volOff or G.vol,
+    title = tr("core.audio"),
     state = visualState,
-    value = S[kind],
+    value = S.vol,
     enabled = S.audioReady,
     tooltip = tr("core.tip.mute"),
-    onClick = function() sys.toggle(kind) end,
+    onClick = function() sys.toggle("vol") end,
     onChange = onChange,
     onEnd = onEnd,
+    buttons = { openButton("t-vol", "audio") },
   })
 end
 
-local function monitorTiles()
-  local tiles = {}
-
-  if #S.monitors == 0 then
-    table.insert(tiles, C.sliderTile({
-      key = "t-bri-empty",
-      glyph = G.bright,
-      title = tr("core.brightness"),
-      state = "disabled",
-      value = 0,
-      enabled = false,
-    }))
-    return tiles
+local function firstReadyMonitor()
+  for _, m in ipairs(S.monitors) do
+    if m.ready then return m end
   end
+  return S.monitors[1]
+end
 
-  for _, mon in ipairs(S.monitors) do
-    local onChange, onEnd = sys.monitorSlider(mon)
+-- One slider for every monitor (system.luau always runs in sync mode).
+local function brightnessTile()
+  local mon = firstReadyMonitor()
+  local ready = mon ~= nil and mon.ready
+  local onChange, onEnd
+  if ready then onChange, onEnd = sys.monitorSlider(mon) end
 
-    table.insert(tiles, C.sliderTile({
-      key = "t-bri-" .. mon.bus,
-      glyph = G.monitor,
-      title = mon.name,
-      state = mon.ready and "active" or "disabled",
-      value = mon.value,
-      enabled = mon.ready,
-      tooltip = tr("core.tip.brightness_preset"),
-      onClick = function() sys.applyBrightnessPreset(mon) end,
-      onChange = onChange,
-      onEnd = onEnd,
-    }))
-  end
-  return tiles
+  return C.sliderTile({
+    key = "t-bri",
+    glyph = G.bright,
+    title = tr("core.brightness"),
+    state = ready and "active" or "disabled",
+    value = mon and mon.value or 0,
+    enabled = ready,
+    tooltip = tr("core.tip.brightness_preset"),
+    onClick = function() sys.applyBrightnessPreset(mon) end,
+    onChange = onChange,
+    onEnd = onEnd,
+    buttons = { openButton("t-bri", "monitor") },
+  })
 end
 
 -- ---------- connectivity ----------
@@ -104,6 +128,7 @@ end
 local function netTile()
   local n = S.net
   local onCycle = function() sys.cycleNetwork() end
+  local netButtons = { openButton("t-net", "network") }
 
   if n.kind == "ethernet" then
     return C.tile({
@@ -114,6 +139,7 @@ local function netTile()
       state = "active",
       tooltip = tr("core.tip.network_cycle"),
       onClick = onCycle,
+      buttons = netButtons,
     })
   end
 
@@ -126,6 +152,7 @@ local function netTile()
       state = "active",
       tooltip = tr("core.tip.network_cycle"),
       onClick = onCycle,
+      buttons = netButtons,
     })
   end
 
@@ -137,6 +164,7 @@ local function netTile()
     state = "disabled",
     tooltip = tr("core.tip.network_cycle"),
     onClick = onCycle,
+    buttons = netButtons,
   })
 end
 
@@ -153,6 +181,7 @@ local function btTile()
     state = S.bt and "active" or "disabled",
     tooltip = tr("core.tip.bt_toggle"),
     onClick = function() sys.toggle("bt") end,
+    buttons = { openButton("t-bt", "bluetooth") },
   })
 end
 
@@ -165,6 +194,7 @@ local function powerProfileRow()
       key = key,
       glyph = glyph,
       label = label,
+      height = 56,
       active = S.powerProfile == profile,
       onClick = function() sys.setPowerProfile(profile) end,
     })
@@ -178,7 +208,7 @@ local function powerProfileRow()
   }
 end
 
--- ---------- quick toggles (4 cols: theme mode, DND, caffeine, nightlight) ----------
+-- ---------- quick toggles & shortcuts (6 tiles: 96.3 x 78 px, ~1.23:1) ----------
 
 local function quickToggleRow()
   local themeGlyph = G.themeDark
@@ -191,8 +221,51 @@ local function quickToggleRow()
     themeLabel = tr("core.theme.auto")
   end
 
+  local function quickTile(opts)
+    opts.height = 64
+    opts.glyphSize = 20
+    opts.fontSize = 10.5
+    opts.gap = 4
+    return C.actionTile(opts)
+  end
+
   return {
-    C.actionTile({
+    quickTile({
+      key = "q-clipboard",
+      glyph = G.clipboard,
+      label = trOr("core.clipboard", "Clipboard"),
+      active = false,
+      onClick = function() openPanel("clipboard") end,
+    }),
+    quickTile({
+      key = "q-wallpaper",
+      glyph = G.wallpaper,
+      label = trOr("core.wallpaper", "Wallpaper"),
+      active = false,
+      onClick = function() openPanel("wallpaper") end,
+    }),
+    quickTile({
+      key = "q-caffeine",
+      glyph = G.caffeine,
+      label = tr("core.caffeine"),
+      active = S.caffeine,
+      onClick = function() sys.toggle("caffeine") end,
+    }),
+    quickTile({
+      key = "q-dnd",
+      glyph = S.dnd and G.dnd or G.dndOff,
+      label = tr("core.dnd"),
+      active = S.dnd,
+      onClick = function() sys.toggle("dnd") end,
+    }),
+    quickTile({
+      key = "q-nightlight",
+      glyph = S.nightLight and G.nightLight or G.nightLightOff,
+      label = tr("core.night_light"),
+      active = S.nightLight,
+      onClick = function() sys.toggle("nightLight") end,
+    }),
+    quickTile({
       key = "q-theme",
       glyph = themeGlyph,
       label = themeLabel,
@@ -200,63 +273,8 @@ local function quickToggleRow()
       tooltip = tr("core.tip.theme_cycle"),
       onClick = function() sys.cycleThemeMode() end,
     }),
-    C.actionTile({
-      key = "q-dnd",
-      glyph = S.dnd and G.dnd or G.dndOff,
-      label = tr("core.dnd"),
-      active = S.dnd,
-      onClick = function() sys.toggle("dnd") end,
-    }),
-    C.actionTile({
-      key = "q-caffeine",
-      glyph = G.caffeine,
-      label = tr("core.caffeine"),
-      active = S.caffeine,
-      onClick = function() sys.toggle("caffeine") end,
-    }),
-    C.actionTile({
-      key = "q-nightlight",
-      glyph = S.nightLight and G.nightLight or G.nightLightOff,
-      label = tr("core.night_light"),
-      active = S.nightLight,
-      onClick = function() sys.toggle("nightLight") end,
-    }),
-    cols = 4,
+    cols = 6,
   }
-end
-
--- ---------- session actions (3rd column: lock on top -> shutdown on bottom) ----------
-
-local function sessionColumn()
-  if noctalia.getConfig("hide_session_button") == true then
-    return nil
-  end
-
-  local function sBtn(key, glyph, action, tip)
-    return C.iconTile({
-      key = key,
-      glyph = glyph,
-      tooltip = tip,
-      active = false,
-      onClick = function()
-        panel.close()
-        noctalia.runAsync({ "noctalia", "msg", "session", action })
-      end,
-    })
-  end
-
-  return ui.column({
-    key = "session-col",
-    width = 56,
-    gap = 10,
-    align = "stretch",
-  }, {
-    sBtn("s-lock", G.lock, "lock", tr("core.session.lock")),
-    sBtn("s-suspend", G.suspend, "lock-and-suspend", tr("core.session.suspend_tip")),
-    sBtn("s-logout", G.logout, "logout", tr("core.session.logout")),
-    sBtn("s-reboot", G.reboot, "reboot", tr("core.session.reboot")),
-    sBtn("s-shutdown", G.shutdown, "shutdown", tr("core.session.shutdown")),
-  })
 end
 
 -- ---------- header & render ----------
@@ -274,22 +292,21 @@ local function header()
     sub = sub,
     tips = {
       settings = tr("core.tip.settings"),
+      session = tr("core.tip.session"),
       close = tr("core.tip.close"),
     },
     onSettings = function() noctalia.openSettings() end,
+    onSession = function() openPanel("session") end,
     onClose = function() panel.close() end,
   })
 end
 
-local function render()
+function render()
   local groups = {
-    { volumeTile("vol", tr("core.audio"), G.vol, G.volOff), volumeTile("mic", tr("core.mic"), G.mic, G.micOff) },
+    { audioTile(), cols = 1 },
   }
 
-  local mons = monitorTiles()
-  for i = 1, #mons, 2 do
-    table.insert(groups, { mons[i], mons[i + 1] })
-  end
+  table.insert(groups, { brightnessTile(), cols = 1 })
 
   table.insert(groups, { netTile(), btTile() })
 
@@ -300,17 +317,9 @@ local function render()
 
   table.insert(groups, quickToggleRow())
 
-  local mainCol = ui.column({ key = "main-col", flexGrow = 1, gap = 10 }, C.grid(groups))
-  local bodyItems = { mainCol }
-
-  local sCol = sessionColumn()
-  if sCol then
-    table.insert(bodyItems, sCol)
-  end
-
   panel.render(ui.column({ gap = 12 }, {
     header(),
-    ui.row({ key = "body", gap = 10, align = "stretch" }, bodyItems),
+    ui.column({ key = "main-col", gap = 10 }, C.grid(groups)),
   }))
 end
 

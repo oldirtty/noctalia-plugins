@@ -4,6 +4,10 @@
 
 local C = {}
 
+-- Hover state for full-height arrows; the panel sets C.onHover to re-render.
+local hovered = {}
+C.onHover = nil
+
 local function getSystemRadius(): number
   local setting = noctalia.getSetting("shell.corner_radius_scale")
   local factor = (setting ~= nil) and tonumber(setting) or 1.0
@@ -97,11 +101,43 @@ local function titles(key, title, subtitle)
   })
 end
 
--- a: user, host, sub, tips { settings, close }, onSettings, onClose
+-- Bare glyph in a column that stretches to its parent's height (outline, primary on hover).
+local function glyphButton(b)
+  return ui.column({
+    key = b.key,
+    width = 28,
+    align = "center",
+    justify = "center",
+    tooltip = b.tooltip,
+    onClick = b.onClick,
+    onHover = function(state)
+      hovered[b.key] = state == "true"
+      if C.onHover then C.onHover() end
+    end,
+  }, {
+    ui.glyph({ name = b.glyph, size = b.size or 21, color = hovered[b.key] and "primary" or "outline" }),
+  })
+end
+
+-- Trailing buttons for tiles. a.buttons: { { key, glyph, tooltip, onClick, full, size }, ... }
+-- full = true: bare glyph in a column that stretches to its parent's height.
+local function trailingButtons(items, buttons)
+  for _, b in ipairs(buttons or {}) do
+    if b.full then
+      table.insert(items, glyphButton(b))
+    else
+      table.insert(items, ui.button({ key = b.key, glyph = b.glyph, tooltip = b.tooltip, onClick = b.onClick }))
+    end
+  end
+  return items
+end
+
+-- a: user, host, sub, tips { settings, session, close }, onSettings, onSession, onClose
 function C.header(a)
   local circularAvatar = getBoolSetting("shell.circular_avatar", true)
   local showClose = getBoolSetting("shell.show_close_buttons", true)
   local showSettings = noctalia.getConfig("hide_settings_button") ~= true
+  local showSession = noctalia.getConfig("hide_session_button") ~= true
   local avatarPath = noctalia.getSetting("shell.avatar_path")
   local avatarRadius = circularAvatar and 26 or getSystemRadius()
 
@@ -142,6 +178,15 @@ function C.header(a)
     table.insert(items, ui.button({ key = "btn-settings", glyph = "settings", tooltip = a.tips.settings, onClick = a.onSettings }))
   end
 
+  if showSession then
+    table.insert(items, ui.button({
+      key = "btn-session",
+      glyph = "power",
+      tooltip = a.tips.session,
+      onClick = a.onSession,
+    }))
+  end
+
   if showClose then
     table.insert(items, ui.button({ key = "btn-close", glyph = "x", tooltip = a.tips.close, onClick = a.onClose }))
   end
@@ -149,82 +194,109 @@ function C.header(a)
   return ui.row({ key = "header", gap = 10, align = "center" }, items)
 end
 
--- a: key, glyph, title, subtitle, state ("active" | "muted" | "disabled"), onClick, tooltip
+-- Only the badge (onClick/tooltip) and the trailing buttons are interactive.
+-- a: key, glyph, title, subtitle, state ("active" | "muted" | "disabled"), onClick, tooltip, buttons
 function C.tile(a)
   local visualState = a.state or (a.active and "active" or "disabled")
   return ui.row(box(a.key, {
     gap = 12,
     padding = 12,
-    align = "center",
-    tooltip = a.tooltip,
-    onClick = a.onClick,
-  }), {
-    badge(a.key, a.glyph, visualState),
+    align = "stretch",
+  }), trailingButtons({
+    ui.column({ key = a.key .. "-badge-col", justify = "center" }, {
+      badge(a.key, a.glyph, visualState, a.onClick, a.tooltip),
+    }),
     titles(a.key, a.title, a.subtitle),
-  })
+  }, a.buttons))
 end
 
--- Compact square-ish action tile (used for 3-col power modes, 4-col toggles)
--- a: key, glyph, label, active, onClick, tooltip
+-- Compact action tile (3-col power modes, 6-col ~1.23:1 quick tiles)
+-- a: key, glyph, label, active, onClick, tooltip, height, glyphSize, fontSize, gap
 function C.actionTile(a)
   local active = a.active == true
-  return ui.column(box(a.key, {
+  local extra = {
     _active = active,
-    gap = 8,
-    paddingV = 14,
-    paddingH = 6,
+    gap = a.gap or 6,
+    paddingH = 8,
     align = "center",
     justify = "center",
     fill = active and "primary" or "surface_container",
     tooltip = a.tooltip,
     onClick = a.onClick,
-  }), {
+  }
+  if a.height then
+    extra.height = a.height
+  else
+    extra.paddingV = 8
+  end
+
+  return ui.column(box(a.key, extra), {
     ui.glyph({
       name = a.glyph,
-      size = 21,
+      size = a.glyphSize or 20,
       color = active and "on_primary" or "on_surface",
     }),
     ui.label({
       text = a.label,
-      fontSize = 12,
+      fontSize = a.fontSize or 12,
       fontWeight = "medium",
       color = active and "on_primary" or "on_surface",
+      textAlign = "center",
       maxLines = 1,
-    }),
-  })
-end
-
--- Square icon-only action tile (used for the vertical session column)
--- a: key, glyph, active, onClick, tooltip
-function C.iconTile(a)
-  local active = a.active == true
-  return ui.column(box(a.key, {
-    _active = active,
-    align = "center",
-    justify = "center",
-    fill = active and "primary" or "surface_container",
-    tooltip = a.tooltip,
-    onClick = a.onClick,
-  }), {
-    ui.glyph({
-      name = a.glyph,
-      size = 21,
-      color = active and "on_primary" or "on_surface",
     }),
   })
 end
 
 -- Grid-like layout:
 -- botao | Title
--- botao | Slider + %
+-- botao | Slider + % + arrow
 -- a: key, glyph, title, state ("active" | "muted" | "disabled"), value, enabled,
---    onClick, tooltip, onChange, onEnd
-function C.sliderTile(a)
+--    onClick, tooltip, onChange, onEnd, headButtons (bare glyphs next to the title)
+local function sliderRow(a)
   local enabled = a.enabled ~= false
   local visualState = a.state or (enabled and "active" or "disabled")
   local val = a.value or 0
 
-  return ui.row(box(a.key, { gap = 12, padding = 12, align = "center" }), {
+  local headItems = {
+    ui.label({
+      text = a.title,
+      fontSize = 14,
+      fontWeight = "bold",
+      flexGrow = 1,
+      maxLines = 1,
+    }),
+  }
+  trailingButtons(headItems, a.headButtons)
+
+  local controlItems = {
+    ui.column({ key = a.key .. "-slider-col", flexGrow = 1, justify = "center" }, {
+      ui.slider({
+        key = a.key .. "-slider",
+        flexGrow = 1,
+        min = 0,
+        max = 100,
+        step = 1,
+        value = val,
+        enabled = enabled,
+        onChange = a.onChange,
+        onDragEnd = a.onEnd,
+      }),
+    }),
+    ui.column({ key = a.key .. "-value-col", justify = "center" }, {
+      ui.label({
+        key = a.key .. "-value",
+        text = tostring(val) .. "%",
+        width = 38,
+        fontSize = 13,
+        fontWeight = "medium",
+        color = "on_surface",
+        textAlign = "end",
+        maxLines = 1,
+      }),
+    }),
+  }
+
+  return ui.row({ key = a.key, gap = 12, align = "center" }, {
     badge(a.key, a.glyph, visualState, a.onClick, a.tooltip),
     ui.column({
       key = a.key .. "-body",
@@ -234,49 +306,36 @@ function C.sliderTile(a)
     }, {
       ui.row({
         key = a.key .. "-head",
+        gap = 8,
         align = "center",
-        tooltip = a.tooltip,
-        onClick = a.onClick,
         paddingV = 4,
-      }, {
-        ui.label({
-          text = a.title,
-          fontSize = 14,
-          fontWeight = "bold",
-          flexGrow = 1,
-          maxLines = 1,
-        }),
-      }),
+      }, headItems),
       ui.row({
         key = a.key .. "-control",
         gap = 8,
-        align = "center",
+        align = "stretch",
         paddingV = -8,
-      }, {
-        ui.slider({
-          key = a.key .. "-slider",
-          flexGrow = 1,
-          min = 0,
-          max = 100,
-          step = 1,
-          value = val,
-          enabled = enabled,
-          onChange = a.onChange,
-          onDragEnd = a.onEnd,
-        }),
-        ui.label({
-          key = a.key .. "-value",
-          text = tostring(val) .. "%",
-          width = 38,
-          fontSize = 13,
-          fontWeight = "medium",
-          color = "on_surface",
-          textAlign = "end",
-          maxLines = 1,
-        }),
-      }),
+      }, controlItems),
     }),
   })
+end
+
+-- One box holding one or more slider rows (same args as sliderTile, one per row).
+-- sideButtons (full = true) become one column spanning the whole box height, so every
+-- row gets the same width and the button centers on the block.
+function C.sliderGroup(key, rows, sideButtons)
+  local children = {}
+  for _, a in ipairs(rows) do
+    table.insert(children, sliderRow(a))
+  end
+  return ui.row(box(key, { gap = 8, padding = 12, align = "stretch" }), trailingButtons({
+    ui.column({ key = key .. "-rows", flexGrow = 1, gap = 12, justify = "center" }, children),
+  }, sideButtons))
+end
+
+-- a.buttons: side buttons (see sliderGroup)
+function C.sliderTile(a)
+  return C.sliderGroup(a.key .. "-box", { a }, a.buttons)
 end
 
 -- groups: array of rows; each row is { item1, item2, ..., cols = N } (default cols = 2).
