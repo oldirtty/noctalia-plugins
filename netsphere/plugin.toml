@@ -1,0 +1,176 @@
+id = "oldirtty/netsphere"
+name = "Netsphere"
+version = "0.1.0"
+plugin_api = 31
+author = "oldirtty"
+license = "MIT"
+icon = "network"
+description = "Network bar widget: wired/Wi-Fi/off icons, live tooltip, peek label, per-icon glyph or image."
+tags = ["widget", "network"]
+dependencies = ["networkmanager", "iproute2", "imagemagick (only for Colorize Custom Image)"]
+
+[[widget]]
+id = "widget"
+entry = "widget.luau"
+
+  [widget.actions]
+  left = "panel-toggle control-center network"
+
+  [[widget.setting]]
+  key = "show_label"
+  type = "bool"
+  label_key = "settings.show_label.label"
+  description_key = "settings.show_label.description"
+  default = true
+
+  [[widget.setting]]
+  key = "glyph_position"
+  type = "select"
+  label_key = "settings.glyph_position.label"
+  description_key = "settings.glyph_position.description"
+  default = "before"
+  options = [
+    { value = "before", label_key = "settings.glyph_position.before" },
+    { value = "after", label_key = "settings.glyph_position.after" },
+  ]
+  visible_when = { key = "show_label", values = ["true"] }
+
+  [[widget.setting]]
+  key = "peek"
+  type = "bool"
+  label_key = "settings.peek.label"
+  description_key = "settings.peek.description"
+  default = false
+  visible_when = { key = "show_label", values = ["true"] }
+
+  [[widget.setting]]
+  key = "peek_delay_ms"
+  type = "int"
+  label_key = "settings.peek_delay_ms.label"
+  description_key = "settings.peek_delay_ms.description"
+  default = 100
+  min = 0
+  max = 2000
+  step = 50
+  visible_when = { key = "peek", values = ["true"] }
+
+  [[widget.setting]]
+  key = "hide_when_off"
+  type = "bool"
+  label_key = "settings.hide_when_off.label"
+  description_key = "settings.hide_when_off.description"
+  default = false
+
+  [[widget.setting]]
+  key = "hide_when_disconnected"
+  type = "bool"
+  label_key = "settings.hide_when_disconnected.label"
+  description_key = "settings.hide_when_disconnected.description"
+  default = false
+
+  [[widget.setting]]
+  key = "colorize_custom_image"
+  type = "bool"
+  label_key = "settings.colorize_custom_image.label"
+  description_key = "settings.colorize_custom_image.description"
+  default = false
+
+  [[widget.setting]]
+  key = "image_size"
+  type = "int"
+  label_key = "settings.image_size.label"
+  description_key = "settings.image_size.description"
+  default = 16
+  min = 8
+  max = 48
+  step = 1
+
+  [[widget.setting]]
+  key = "glyph_wifi_strong"
+  type = "glyph"
+  label_key = "settings.glyph_wifi_strong.label"
+  description_key = "settings.glyph_wifi_strong.description"
+  default = ""
+
+  [[widget.setting]]
+  key = "image_wifi_strong"
+  type = "file"
+  label_key = "settings.image_wifi_strong.label"
+  description_key = "settings.image_wifi_strong.description"
+  default = ""
+  extensions = [".png", ".svg", ".jpg", ".jpeg", ".webp"]
+
+  [[widget.setting]]
+  key = "glyph_wifi_medium"
+  type = "glyph"
+  label_key = "settings.glyph_wifi_medium.label"
+  description_key = "settings.glyph_wifi_medium.description"
+  default = ""
+
+  [[widget.setting]]
+  key = "image_wifi_medium"
+  type = "file"
+  label_key = "settings.image_wifi_medium.label"
+  description_key = "settings.image_wifi_medium.description"
+  default = ""
+  extensions = [".png", ".svg", ".jpg", ".jpeg", ".webp"]
+
+  [[widget.setting]]
+  key = "glyph_wifi_weak"
+  type = "glyph"
+  label_key = "settings.glyph_wifi_weak.label"
+  description_key = "settings.glyph_wifi_weak.description"
+  default = ""
+
+  [[widget.setting]]
+  key = "image_wifi_weak"
+  type = "file"
+  label_key = "settings.image_wifi_weak.label"
+  description_key = "settings.image_wifi_weak.description"
+  default = ""
+  extensions = [".png", ".svg", ".jpg", ".jpeg", ".webp"]
+
+  [[widget.setting]]
+  key = "glyph_wifi_disconnected"
+  type = "glyph"
+  label_key = "settings.glyph_wifi_disconnected.label"
+  description_key = "settings.glyph_wifi_disconnected.description"
+  default = ""
+
+  [[widget.setting]]
+  key = "image_wifi_disconnected"
+  type = "file"
+  label_key = "settings.image_wifi_disconnected.label"
+  description_key = "settings.image_wifi_disconnected.description"
+  default = ""
+  extensions = [".png", ".svg", ".jpg", ".jpeg", ".webp"]
+
+  [[widget.setting]]
+  key = "glyph_ethernet"
+  type = "glyph"
+  label_key = "settings.glyph_ethernet.label"
+  description_key = "settings.glyph_ethernet.description"
+  default = ""
+
+  [[widget.setting]]
+  key = "image_ethernet"
+  type = "file"
+  label_key = "settings.image_ethernet.label"
+  description_key = "settings.image_ethernet.description"
+  default = ""
+  extensions = [".png", ".svg", ".jpg", ".jpeg", ".webp"]
+
+  [[widget.setting]]
+  key = "glyph_off"
+  type = "glyph"
+  label_key = "settings.glyph_off.label"
+  description_key = "settings.glyph_off.description"
+  default = ""
+
+  [[widget.setting]]
+  key = "image_off"
+  type = "file"
+  label_key = "settings.image_off.label"
+  description_key = "settings.image_off.description"
+  default = ""
+  extensions = [".png", ".svg", ".jpg", ".jpeg", ".webp"]
