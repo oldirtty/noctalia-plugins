@@ -1,0 +1,109 @@
+id = "oldirtty/core"
+name = "Core"
+version = "0.8.1"
+plugin_api = 53
+author = "oldirtty"
+license = "MIT"
+icon = "adjustments-horizontal"
+description = "Control-center style quick panel: volume, brightness, network, power modes and session actions."
+tags = ["panel", "system"]
+dependencies = ["wireplumber", "ddcutil", "networkmanager", "bluez-utils", "iproute2", "imagemagick (only for Colorize Custom Image)"]
+
+[[setting]]
+key = "refresh_seconds"
+type = "int"
+label_key = "settings.refresh_seconds.label"
+description_key = "settings.refresh_seconds.description"
+default = 2
+min = 1
+max = 10
+
+[[setting]]
+key = "brightness_preset"
+type = "float"
+label_key = "settings.brightness_preset.label"
+description_key = "settings.brightness_preset.description"
+default = 0.05
+min = 0.0
+max = 1.0
+step = 0.01
+
+[[setting]]
+key = "hide_settings_button"
+type = "bool"
+label_key = "settings.hide_settings_button.label"
+description_key = "settings.hide_settings_button.description"
+default = false
+
+[[setting]]
+key = "hide_session_button"
+type = "bool"
+label_key = "settings.hide_session_button.label"
+description_key = "settings.hide_session_button.description"
+default = false
+
+[[widget]]
+id = "widget"
+entry = "widget.luau"
+
+  [[widget.setting]]
+  key = "glyph"
+  type = "glyph"
+  label_key = "settings.glyph.label"
+  description_key = "settings.glyph.description"
+  default = "adjustments-horizontal"
+
+  [[widget.setting]]
+  key = "custom_image"
+  type = "file"
+  label_key = "settings.custom_image.label"
+  description_key = "settings.custom_image.description"
+  default = ""
+  extensions = [".png", ".svg", ".jpg", ".jpeg", ".webp"]
+
+  [[widget.setting]]
+  key = "colorize_custom_image"
+  type = "bool"
+  label_key = "settings.colorize_custom_image.label"
+  description_key = "settings.colorize_custom_image.description"
+  default = false
+
+  [[widget.setting]]
+  key = "image_size"
+  type = "int"
+  label_key = "settings.image_size.label"
+  description_key = "settings.image_size.description"
+  default = 16
+  min = 8
+  max = 48
+  step = 1
+
+  [[widget.setting]]
+  key = "tooltip_output_vol"
+  type = "bool"
+  label_key = "settings.tooltip_output_vol.label"
+  description_key = "settings.tooltip_output_vol.description"
+  default = true
+
+  [[widget.setting]]
+  key = "tooltip_input_vol"
+  type = "bool"
+  label_key = "settings.tooltip_input_vol.label"
+  description_key = "settings.tooltip_input_vol.description"
+  default = true
+
+  [[widget.setting]]
+  key = "tooltip_brightness"
+  type = "bool"
+  label_key = "settings.tooltip_brightness.label"
+  description_key = "settings.tooltip_brightness.description"
+  default = true
+
+[[panel]]
+id = "panel"
+entry = "panel.luau"
+width = 540
+height = "content"
+max_height = 920
+placement = "attached"
+open_near_click = true
