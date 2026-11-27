@@ -124,7 +124,7 @@ description_key = "settings.block_height.description"
 default = 1.0
 min = 0.3
 max = 1.0
-step = 0.01
+step = 0.05
 
 [[widget.setting]]
 key       = "show_underline"

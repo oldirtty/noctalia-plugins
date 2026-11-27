@@ -193,21 +193,25 @@ local function computeLayout(blockHeight)
   local height, contentScale = barGeometry()
   local scale = outputScale()
 
-  -- Whole device pixels, never more than the box. A block whose size has a different parity than the
-  -- box lands half a pixel off center and rounds to one side (more margin below), so match the parity.
+  -- Whole device pixels, never more than the box. Any leftover is split by an explicit spacer in
+  -- render(), so every block height step changes the size by whole pixels and stays centered.
   local boxPixels = math.floor(height * scale + 0.5)
   local blockPixels = math.max(1, math.floor(height * blockHeight * scale + 0.0001))
-  if blockPixels < boxPixels and (boxPixels - blockPixels) % 2 ~= 0 then
-    blockPixels = blockPixels + 1
-  end
   local pixels = blockPixels / scale
   local vertical = barWidget.isVertical()
 
   -- At full height the block ends one pixel row short of the bar, so it gets one extra device pixel
-  local bias = blockHeight >= FULL_HEIGHT_EPSILON and FULL_HEIGHT_BIAS / scale or 0
+  local full = blockHeight >= FULL_HEIGHT_EPSILON
+  local bias = full and FULL_HEIGHT_BIAS / scale or 0
+
+  -- Extra pixel of an odd leftover goes on top, since the block sat closer to the top before
+  local offsetPixels = full and 0 or math.ceil((boxPixels - blockPixels) / 2)
+  local outerPixels = math.max(boxPixels, blockPixels + (full and FULL_HEIGHT_BIAS or 0))
 
   return {
     thickness = (pixels + bias) / contentScale,
+    offset = offsetPixels / scale / contentScale,
+    outer = outerPixels / scale / contentScale,
     scale = scale,
     contentScale = contentScale,
     sizeProp = vertical and "width" or "height",
@@ -424,7 +428,12 @@ local function render()
   end
 
   local container = layout.vertical and ui.column or ui.row
-  barWidget.render(container({ gap = snapUi(layout, cfg.gap), align = "center" }, chips))
+  local inner = container({ gap = snapUi(layout, cfg.gap), align = "center" }, chips)
+
+  -- Full-thickness wrapper with a spacer, so the block is centered instead of sitting at the top
+  local spacer = ui.box({ key = "v-spacer", [layout.sizeProp] = layout.offset })
+  local wrapper = layout.vertical and ui.row or ui.column
+  barWidget.render(wrapper({ [layout.sizeProp] = layout.outer }, { spacer, inner }))
 end
 
 -- Animation loop
