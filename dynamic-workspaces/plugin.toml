@@ -38,6 +38,15 @@ label_key = "settings.hide_last.label"
 default = false
 
 [[widget.setting]]
+key = "min_workspaces"
+type = "int"
+label_key = "settings.min_workspaces.label"
+description_key = "settings.min_workspaces.description"
+default = 0
+min = 0
+max = 32
+
+[[widget.setting]]
 key = "pill_size_mode"
 type = "select"
 label_key = "settings.pill_size_mode.label"

@@ -277,10 +277,29 @@ local function visibleWorkspaces()
     return a.index < b.index
   end)
 
-  if noctalia.getConfig("hide_last") then
+  local hideFirst = noctalia.getConfig("hide_first")
+  local hideLast = noctalia.getConfig("hide_last")
+
+  -- Pad with placeholders so at least min_workspaces remain visible after hiding
+  local need = noctalia.getConfig("min_workspaces") + (hideFirst and 1 or 0) + (hideLast and 1 or 0)
+  if noctalia.getConfig("min_workspaces") > 0 then
+    local nextIndex = (items[#items] and items[#items].index or 0) + 1
+    while #items < need do
+      table.insert(items, {
+        id = "placeholder:" .. tostring(nextIndex),
+        index = nextIndex,
+        output = current,
+        active = false,
+        occupied = false,
+      })
+      nextIndex = nextIndex + 1
+    end
+  end
+
+  if hideLast then
     table.remove(items)
   end
-  if noctalia.getConfig("hide_first") then
+  if hideFirst then
     table.remove(items, 1)
   end
 

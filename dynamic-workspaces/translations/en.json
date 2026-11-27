@@ -25,6 +25,8 @@
   "settings.hide_last.label": "Hide Last Workspace",
   "settings.inactive_length.label": "Inactive Pill Length",
   "settings.inactive_padding.label": "Inactive Pill Padding",
+  "settings.min_workspaces.description": "Always show at least this many workspaces, even if they don't exist yet. 0 shows only the existing ones.",
+  "settings.min_workspaces.label": "Minimum Workspaces",
   "settings.occupied_background.label": "Occupied Background",
   "settings.occupied_foreground.label": "Occupied Foreground",
   "settings.occupied_underline.label": "Occupied Underline",
