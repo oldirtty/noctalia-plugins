@@ -7,7 +7,7 @@ license = "MIT"
 icon = "adjustments-horizontal"
 description = "Control-center style quick panel: volume, brightness, network, power modes and session actions."
 tags = ["panel", "system"]
-dependencies = ["wireplumber", "ddcutil", "networkmanager", "bluez-utils", "iproute2", "imagemagick (only for Colorize Custom Image)"]
+dependencies = ["wireplumber", "ddcutil", "networkmanager", "bluez-utils", "iproute2"]
 
 [[setting]]
 key = "refresh_seconds"

@@ -208,7 +208,7 @@ local function powerProfileRow()
   }
 end
 
--- ---------- quick toggles & shortcuts (6 tiles: 96.3 x 78 px, ~1.23:1) ----------
+-- ---------- quick toggles & shortcuts ----------
 
 local function quickToggleRow()
   local themeGlyph = G.themeDark
@@ -333,6 +333,7 @@ end
 
 function onOpen()
   isOpen = true
+  C.clearHover()
   noctalia.setUpdateInterval(250)
   render()
   sys.open()
@@ -340,6 +341,7 @@ end
 
 function onClose()
   isOpen = false
+  C.clearHover()
   sys.close()
 end
 

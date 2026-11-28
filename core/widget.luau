@@ -293,7 +293,7 @@ render = function()
     align = "center",
     justify = "center",
   }, {
-    icon.node(cfg, render),
+    icon.node(cfg),
   }))
   barWidget.setTooltip(buildTooltip())
 end

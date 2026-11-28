@@ -4,9 +4,20 @@
 
 local C = {}
 
--- Hover state for full-height arrows; the panel sets C.onHover to re-render.
+-- Hover state for interactive buttons; the panel sets C.onHover to re-render.
 local hovered = {}
 C.onHover = nil
+
+function C.clearHover()
+  hovered = {}
+end
+
+local function setHovered(key: string, active: boolean)
+  if hovered[key] ~= active then
+    hovered[key] = active
+    if C.onHover then C.onHover() end
+  end
+end
 
 local function getSystemRadius(): number
   local setting = noctalia.getSetting("shell.corner_radius_scale")
@@ -49,6 +60,9 @@ end
 
 -- visualState: "active" | "muted" | "disabled"
 local function badge(key, glyph, visualState, onClick, tooltip)
+  local badgeKey = key .. "-badge"
+  local isHovered = onClick ~= nil and hovered[badgeKey] == true
+
   local fill = "outline_variant"
   local fg = "on_surface"
 
@@ -60,11 +74,16 @@ local function badge(key, glyph, visualState, onClick, tooltip)
     fg = "surface"
   end
 
+  if isHovered then
+    fill = "hover"
+    fg = "on_hover"
+  end
+
   local btnBorders = getBoolSetting("shell.button_borders", false)
-  local showBorder = btnBorders and visualState == "disabled"
+  local showBorder = btnBorders and visualState == "disabled" and not isHovered
 
   return ui.row({
-    key = key .. "-badge",
+    key = badgeKey,
     width = 48,
     height = 48,
     radius = getSystemRadius(),
@@ -74,6 +93,9 @@ local function badge(key, glyph, visualState, onClick, tooltip)
     border = showBorder and "outline" or nil,
     borderWidth = showBorder and 1 or nil,
     onClick = onClick,
+    onHover = onClick and function(state)
+      setHovered(badgeKey, state == "true")
+    end or nil,
     tooltip = tooltip,
   }, {
     ui.glyph({
@@ -101,21 +123,27 @@ local function titles(key, title, subtitle)
   })
 end
 
--- Bare glyph in a column that stretches to its parent's height (outline, primary on hover).
+-- Bare glyph in a column that stretches to its parent's height.
 local function glyphButton(b)
+  local isHovered = hovered[b.key] == true
   return ui.column({
     key = b.key,
     width = 28,
+    radius = getSystemRadius(),
+    fill = isHovered and "hover" or nil,
     align = "center",
     justify = "center",
     tooltip = b.tooltip,
     onClick = b.onClick,
     onHover = function(state)
-      hovered[b.key] = state == "true"
-      if C.onHover then C.onHover() end
+      setHovered(b.key, state == "true")
     end,
   }, {
-    ui.glyph({ name = b.glyph, size = b.size or 21, color = hovered[b.key] and "primary" or "outline" }),
+    ui.glyph({
+      name = b.glyph,
+      size = b.size or 21,
+      color = isHovered and "on_hover" or "outline",
+    }),
   })
 end
 
@@ -210,19 +238,32 @@ function C.tile(a)
   }, a.buttons))
 end
 
--- Compact action tile (3-col power modes, 6-col ~1.23:1 quick tiles)
+-- Compact action tile (3-col power modes, 6-col quick tiles)
 -- a: key, glyph, label, active, onClick, tooltip, height, glyphSize, fontSize, gap
 function C.actionTile(a)
   local active = a.active == true
+  local isHovered = a.onClick ~= nil and hovered[a.key] == true
+
+  local fill = active and "primary" or "surface_container"
+  local fg = active and "on_primary" or "on_surface"
+
+  if isHovered then
+    fill = "hover"
+    fg = "on_hover"
+  end
+
   local extra = {
     _active = active,
     gap = a.gap or 6,
     paddingH = 8,
     align = "center",
     justify = "center",
-    fill = active and "primary" or "surface_container",
+    fill = fill,
     tooltip = a.tooltip,
     onClick = a.onClick,
+    onHover = a.onClick and function(state)
+      setHovered(a.key, state == "true")
+    end or nil,
   }
   if a.height then
     extra.height = a.height
@@ -234,13 +275,13 @@ function C.actionTile(a)
     ui.glyph({
       name = a.glyph,
       size = a.glyphSize or 20,
-      color = active and "on_primary" or "on_surface",
+      color = fg,
     }),
     ui.label({
       text = a.label,
       fontSize = a.fontSize or 12,
       fontWeight = "medium",
-      color = active and "on_primary" or "on_surface",
+      color = fg,
       textAlign = "center",
       maxLines = 1,
     }),
